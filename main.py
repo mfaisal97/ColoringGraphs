@@ -229,7 +229,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True):
                             if x in G.neighbors(g_node):
                                 if(color != 0):
                                     neighbours_colors.add(color)
-                        print("Checking Forcing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbour_colors)
+                        print("Checking Forcing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
                         if (len(neighbours_colors) == len(max_subgraph_nodes ) - 1):
                             min_colors  = [x for x in range(0, len (max_subgraph_nodes) + 1) if x not in neighbours_colors or x in [0]]
                             colored_nodes[g_node] = max( min_colors)
@@ -247,7 +247,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True):
                             if x in G.neighbors(g_node):
                                 if(color != 0):
                                     neighbours_colors.add(color)
-                        print("Checking new coloring node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbour_colors)
+                        print("Checking new coloring node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
                         if (len(neighbours_colors) == len(max_subgraph_nodes)):
                             colored_nodes[g_node] = current_color
                             max_subgraph_nodes.append(g_node)
@@ -275,7 +275,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True):
                                 if x in G.neighbors(g_node):
                                     if(color != 0):
                                         neighbours_colors.add(color)
-                            print("Checking Inducing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbour_colors)
+                            print("Checking Inducing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
                             min_colors  = [x for x in range(0, len (max_subgraph_nodes) + 1) if x not in neighbours_colors or x in [0]]
                             colored_nodes[g_node] = max( min_colors)
                             if (colored_nodes[g_node] !=  0):    
