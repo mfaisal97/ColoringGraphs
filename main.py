@@ -171,6 +171,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True):
             visited = set()
 
             cur_level = set()
+            color_neighbors = set()
             cur_level.add(max_subgraph_node)
             visited.add(max_subgraph_node)
             while len(visited) < len(g_nodes) and len(cur_level) > 0:
@@ -185,25 +186,29 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True):
 
                 print(neighbours)
 
-
                 for neighbour in neighbours:
+                    visited.add(neighbour)
                     for neighbour_neighbour in G.neighbors(neighbour):
-                        if (neighbour_neighbour not in neighbours):
+                        if (neighbour_neighbour not in neighbours and neighbour_neighbour not in color_neighbors):
                             neighbours_neighbours.add(neighbour_neighbour)
 
                 print(neighbours_neighbours)
 
+                #should check en el colored has no connection with any of the neighbors of the color set not just in the current level
                 for neighbour_neighbour in neighbours_neighbours:
-                    neighbour_neighbour_neighbours = list(G.neighbors(neighbour_neighbour))
-                    common = [x for x in neighbour_neighbour_neighbours if x in neighbours_neighbours and colored_nodes[x] == 0]
+                    neighbour_neighbour_neighbours = [x for x in list(G.neighbors(neighbour_neighbour))]
+                    common = [x for x in neighbour_neighbour_neighbours if (x in neighbours) or (x in color_neighbors and colored_nodes[x] == 0)]
                     if(len(common) == 0):
                         neighbour_colors = set([colored_nodes[node] for node in neighbour_neighbour_neighbours])
                         if(current_color not in neighbour_colors):
                             if (colored_nodes[neighbour_neighbour] == 0):
                                 if (neighbour_neighbour not in visited):
                                     colored_nodes[neighbour_neighbour] = current_color
+                                    for n in G.neighbors(neighbour_neighbour):
+                                        color_neighbors.add(n)
                                     print("Choosing\t", neighbour_neighbour, "\t", current_color, "\tneighbours:\t", neighbour_neighbour_neighbours, "\tColors\t", neighbour_colors)
                                     colored = colored + 1
+                    visited.add(neighbour_neighbour)
                 
                 cur_level = set()
                 for x in neighbours_neighbours:
