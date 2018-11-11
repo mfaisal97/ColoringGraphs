@@ -190,7 +190,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
             current_neighbors_increase  = previous_neighbors_count
 
             firsttime = True
-            while current_neighbors_increase > 0 and firsttime:
+            while current_neighbors_increase > 0 and (firsttime or current_color == 1 ):
                 firsttime = False
 
                 possible_color_nodes = set()
