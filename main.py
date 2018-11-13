@@ -166,8 +166,6 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
         max_subgraph_nodes = [min(max_degree_nodes)]
 
 
-
-
     global_colors_neighbors = dict()
     global_colors_partites = dict()
     for max_subgraph_node in max_subgraph_nodes:
@@ -239,10 +237,41 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
                                 colored = colored + 1
                                 print("Forced\t", g_node, "\t", colored_nodes[g_node], "\t\tneighbors_colors\t:", neighbours_colors)
                                 print(min_colors)
+        
+
+        #inducing colors
+        if induction:
+            if colored == 0 and len([colored_nodes[x] for x,y in colored_nodes.items() if y != 0]) < len(g_nodes):
+                min_distinct_colors = max([ len(set([colored_nodes[neighbour] for neighbour in G.neighbors(g_node) if colored_nodes[neighbour] != 0 ]))   for g_node in g_nodes if colored_nodes[g_node] == 0])
+                print("Max Dinstinct Colors \t", min_distinct_colors)
+                for g_node in g_nodes:
+                    if (len(set([colored_nodes[neighbour] for neighbour in G.neighbors(g_node) if colored_nodes[neighbour] != 0 ])) == min_distinct_colors) :
+                        if (colored_nodes[g_node] == 0):
+                            neighbours_colors = set()
+                            for x, color in colored_nodes.items():
+                                if x in G.neighbors(g_node):
+                                    if(color != 0):
+                                        neighbours_colors.add(color)
+                            print("Checking Inducing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
+                            min_colors  = [x for x in range(0, len (max_subgraph_nodes) + 1) if (x not in neighbours_colors) or (x in [0])]
+                            colored_nodes[g_node] = max(min_colors)
+
+                            if (colored_nodes[g_node] !=  0):    
+                                for g_node2 in max_subgraph_nodes:
+                                    if (colored_nodes[g_node] == colored_nodes[g_node2]):
+                                        global_colors_partites[g_node2].add(g_node)
+                                        for eachneighbor in G.neighbors(g_node):
+                                            global_colors_neighbors[g_node2].add(eachneighbor)
+
+                                colored = colored + 1
+                                print("Induced\t", g_node, "\t", colored_nodes[g_node], "\t\tneighbors_colors\t:", neighbours_colors)
+                                print(min_colors)
+                                break
+
 
         #adding colors
         if(add_colors):
-            if colored == 0:
+            if colored == 0 and current_color < 2:
                 new_color_neighbours = set()
                 for max_subgraph_node in max_subgraph_nodes:
                     for neighbor in global_colors_partites[max_subgraph_node]:
@@ -329,11 +358,151 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
                                 print("Forced\t", g_node, "\t", colored_nodes[g_node], "\t\tneighbors_colors\t:", neighbours_colors)
                                 print(min_colors)
 
-                
+        print("Now colored\t", colored)
+
+    for g_node in G.nodes():
+        got_colors += colors[colored_nodes[g_node]] 
+
+    return got_colors, len(max_subgraph_nodes), colored_nodes
+
+
+def ColorGraph3(G,mirror = True, add_colors = False ,forcing = True, induction = True, max_first = True):
+    colors = "rbgcmykw"
+    got_colors = ""
+
+    hamoone, hamotwo, colored_nodes = ColorGraph2(G, add_colors=add_colors ,forcing=forcing, induction=induction, max_first=max_first)
+
+    g_nodes = G.nodes()
+
+    pivots_neighbors = dict()
+    for node,color in colored_nodes.items():
+        if color == 1:
+            pivots_neighbors[node] = set(G.neighbors(node))
+
+
+    max_degree = 0
+        
+    if (max_first):
+        max_degree = max([len(list (G.neighbors(x))) for x in G.nodes() ])
+    else :
+        max_degree = min([len(list (G.neighbors(x))) for x in G.nodes() ])
+
+    max_degree_nodes = [x for x in G.nodes() if  len(list (G.neighbors(x))) == max_degree]
+    main_pivot = min(max_degree_nodes)
+
+#    colored_nodes[main_pivot] = 1
+#    pivots_neighbors = dict()
+#    pivots_neighbors[main_pivot] = set(G.neighbors(main_pivot))
+
+    possible_colors = set([1,2,3,4,5,6,7,8,9])
+
+    #choosing pivots
+#    colored = 1
+    pivot_class_neighbors = set(G.neighbors(main_pivot))
+    previous_neighbors_count = len(pivot_class_neighbors)
+    current_neighbors_increase = previous_neighbors_count
+    while False:
+        possible_pivots = set()
+        for pivot_neighbor in pivot_class_neighbors:
+            for possible_pivot in G.neighbors(pivot_neighbor):
+                if(possible_pivot not in pivot_class_neighbors):
+                    possible_pivots.add(possible_pivot)
+
+        print(possible_pivots)
+        for possible_pivot in possible_pivots:
+            if(len([x for x in G.neighbors(possible_pivot) if x in possible_pivots]) == 0):
+                neighbour_colors = set([colored_nodes[node] for node in G.neighbors(possible_pivot)])
+                if(1 not in neighbour_colors):
+                    if (colored_nodes[possible_pivot] == 0):
+                        pivots_neighbors[possible_pivot] = set(G.neighbors(possible_pivot))
+                        colored_nodes[possible_pivot] = 1
+                        for n in G.neighbors(possible_pivot):
+                            pivot_class_neighbors.add(n)
+                        print("Initializing\t", possible_pivot, "\t", 1, "\tneighbours:\t", G.neighbors(possible_pivot), "\tColors\t", neighbour_colors)
+                        colored = colored + 1
+        current_neighbors_increase = previous_neighbors_count - len(pivot_class_neighbors)
+        previous_neighbors_count = len(pivot_class_neighbors)
+
+
+    colored = len(colored_nodes.items())
+    print("Start colored\t", colored)
+    while colored != 0:        
+
+        #choosing mirrors
+        while colored != 0:
+            colored = 0
+            if mirror:
+                for pivot, first_neighbors in pivots_neighbors.items():
+                    for first_neighbor in first_neighbors:
+                        bad_common_num = 0
+                        common  = set()
+                        for pvt,neghbrs in pivots_neighbors.items():
+                            for x in G.neighbors(first_neighbor):
+                                if x in neghbrs and colored_nodes[x] == 0:
+                                    common.add(x)
+                                    if x in common and x not in list(G.neighbors(first_neighbor)):
+                                        bad_common_num = bad_common_num + 1
+                        print("Checking fn\t", first_neighbor,"\t",list(G.neighbors(first_neighbor)),"\twith\t", common, "\tbadnum\t", bad_common_num)
+                        if bad_common_num == 0 and colored_nodes[first_neighbor] == 0:
+                            first_pvt_common_neighbors = set()
+                            for cmn in common:
+                                for x in G.neighbors(cmn):
+                                    first_pvt_common_neighbors.add(x)
+
+                            not_possible_colors_for_common = set(colored_nodes[x] for x in first_pvt_common_neighbors)
+                            possible_colors_for_common = set([x for x in possible_colors if x not in not_possible_colors_for_common])
+
+                            not_possible_colors_for_mirror = set(colored_nodes[x] for x in G.neighbors(first_neighbor))
+                            possible_colors_for_mirror = set([x for x in possible_colors if x not in not_possible_colors_for_mirror])
+
+                            print("mirror colors:\t", possible_colors_for_mirror, "\tneighbors colors\t", possible_colors_for_common)
+
+                            if (len (set([x for x in possible_colors_for_common or x in possible_colors_for_mirror])) < 2 ):
+                                if (len(possible_colors_for_common) < 1 or len(possible_colors_for_mirror) < 1):
+                                    break
+                            
+                            if (True):
+                                mirror_color = min(possible_colors_for_mirror)
+                                common_color = min([x for x in possible_colors_for_common if x != mirror_color])
+
+                                colored_nodes[first_neighbor] = mirror_color
+
+                                for cmn in common:
+                                    colored_nodes[cmn] = common_color
+                            else:
+                                common_color = min(possible_colors_for_common)
+                                mirror_color = min([x for x in possible_colors_for_mirror if x != common_color])
+
+                                colored_nodes[first_neighbor] = mirror_color
+
+                                for cmn in common:
+                                    colored_nodes[cmn] = common_color
+
+
+        current_color = max(possible_colors) + 1
+
+        #Writing Forced Colors
+        if False:
+            if colored == 0:
+                for g_node in g_nodes:
+                    if (colored_nodes[g_node] == 0):
+                        neighbours_colors = set()
+                        for x, color in colored_nodes.items():
+                            if x in list (G.neighbors(g_node)):
+                                if(color != 0):
+                                    neighbours_colors.add(color)
+                        print("Checking Forcing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
+                        if (len(neighbours_colors) == len(possible_colors ) - 1):
+                            min_colors  = [x for x in range(0, len (possible_colors) + 1) if x not in neighbours_colors or x in [0]]
+                            colored_nodes[g_node] = max( min_colors)
+                            if (colored_nodes[g_node] != 0):
+                                colored = colored + 1
+                                print("Forced\t", g_node, "\t", colored_nodes[g_node], "\t\tneighbors_colors\t:", neighbours_colors)
+                                print(min_colors)
         
 
         #inducing colors
-        if induction:
+        if False:
             if colored == 0 and len([colored_nodes[x] for x,y in colored_nodes.items() if y != 0]) < len(g_nodes):
                 min_distinct_colors = max([ len(set([colored_nodes[neighbour] for neighbour in G.neighbors(g_node) if colored_nodes[neighbour] != 0 ]))   for g_node in g_nodes if colored_nodes[g_node] == 0])
                 print("Max Dinstinct Colors \t", min_distinct_colors)
@@ -346,16 +515,10 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
                                     if(color != 0):
                                         neighbours_colors.add(color)
                             print("Checking Inducing node:\t", g_node, "\t", G.neighbors(g_node) ,"\t", neighbours_colors)
-                            min_colors  = [x for x in range(0, len (max_subgraph_nodes) + 1) if (x not in neighbours_colors) or (x in [0])]
+                            min_colors  = [x for x in range(0, len (possible_colors) + 1) if (x not in neighbours_colors) or (x in [0])]
                             colored_nodes[g_node] = max(min_colors)
 
-                            if (colored_nodes[g_node] !=  0):    
-                                for g_node2 in max_subgraph_nodes:
-                                    if (colored_nodes[g_node] == colored_nodes[g_node2]):
-                                        global_colors_partites[g_node2].add(g_node)
-                                        for eachneighbor in G.neighbors(g_node):
-                                            global_colors_neighbors[g_node2].add(eachneighbor)
-
+                            if (colored_nodes[g_node] !=  0):
                                 colored = colored + 1
                                 print("Induced\t", g_node, "\t", colored_nodes[g_node], "\t\tneighbors_colors\t:", neighbours_colors)
                                 print(min_colors)
@@ -367,8 +530,7 @@ def ColorGraph2(G,add_colors = False ,forcing = True, induction = True, max_firs
     for g_node in G.nodes():
         got_colors += colors[colored_nodes[g_node]] 
 
-    return got_colors, len(max_subgraph_nodes)
-
+    return got_colors, len(possible_colors)
 
 def GetColorGroundTruth(G):
     GotColors = ""
@@ -383,17 +545,17 @@ def __main__ ():
     G = RandomNGraph(GOrder, GSize, MakeConnectedGraph)
     GColors = "rrrgggbbbm" + "rrrgggbbbm" + "rrrgg"
     print("\t\t\t##########Test One##########")
-    GColors2_Forcing,num1 = ColorGraph2(G,add_colors= False, forcing= True, induction=False)
+    GColors2_Forcing,num1,hamo1 = ColorGraph2(G,add_colors= False, forcing= True, induction=False)
     print("\t\t\t##########Test Two##########")
-    GColors2_Induction, num2 = ColorGraph2(G,add_colors= False, forcing= True, induction=True)
+    GColors2_Induction, num2,hamo2 = ColorGraph2(G,add_colors= False, forcing= True, induction=True)
     print("\t\t\t##########Test Three########")
-    GColors2_addcolors_Forcing,num3 = ColorGraph2(G,add_colors= True, forcing= True, induction=False)
+    GColors2_addcolors_Forcing,num3,hamo3 = ColorGraph2(G,add_colors= True, forcing= True, induction=False)
     print("\t\t\t##########Test Four#########")
-    GColors2_addcolors_Induction,num4 = ColorGraph2(G, add_colors= True, forcing= True, induction= True)
-    print("\t\t\t##########Test Three########")
-    GColors2_addcolors_Forcing_min,num5 = ColorGraph2(G,add_colors= True, forcing= True, induction=False, max_first= False)
-    print("\t\t\t##########Test Four#########")
-    GColors2_addcolors_Induction_min,num6 = ColorGraph2(G, add_colors= True, forcing= True, induction= True, max_first= False)
+    GColors2_addcolors_Induction,num4,hamo4 = ColorGraph2(G, add_colors= True, forcing= True, induction= True)
+    print("\t\t\t##########Test Five########")
+    GColors2_addcolors_Forcing_min,num5 = ColorGraph3(G,add_colors= True, forcing= True, induction=False, max_first= True)
+    print("\t\t\t##########Test Six#########")
+    GColors2_addcolors_Induction_min,num6 = ColorGraph3(G, add_colors= True, forcing= True, induction= True, max_first= True)
 
 
     print(G.order())
